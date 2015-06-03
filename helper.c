@@ -6,8 +6,8 @@
 
 
 int get_array_length(char** array) {
-	int len;
-	int i;
+	int len = 0;
+	int i = 0;
 
 	for(i = 0;; i++) {
 		if (array[i] == 0)
@@ -75,16 +75,19 @@ void free_env(Environment *e) {
 		free_env(e->next);
 	}
 
+	free_type(e->t);
 	free(e);
 }
 
 
 void free_type(Type *t) {
-	if (t->type == ASN) {
+	if (t->type == INT) {
+		free(t->type1);
+	} else if (t->type != VAR) {
 		free_type(t->type1);
 		free_type(t->type2);
-	} else if (t->type == INT) {
-		free_type(t->type1);
+	} else {
+		free(t->type1);
 	}
 
 	free(t);
@@ -121,4 +124,15 @@ int strToNum(char *str) {
 	}
 
 	return result;
+}
+
+
+int contains(char **array, char *val, unsigned int len) {
+	for (unsigned int i = 0; i < len; i++) {
+		if (strcmp(array[i], val) == 0) {
+			return 1;
+		}
+	}
+
+	return 0;
 }

@@ -40,10 +40,7 @@ Type* lookup_env(Environment *e, char *var) {
 		return NULL;
 	}
 
-	Type* type = lookup_env(e->next, var);
-	exp_type ex = type->type;
-	void *tp1 = type->type1;
-	void *tp2 = type->type2;
+	return lookup_env(e->next, var);
 }
 
 

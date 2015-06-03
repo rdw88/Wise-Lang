@@ -40,7 +40,7 @@ char** tokenize(char *expression) {
 	}
 
 	tokens = realloc(tokens, sizeof(char*) * (count + 1));
-	tokens[count] = 0;
+	tokens[count] = '\0';
 
 	return tokens;
 }

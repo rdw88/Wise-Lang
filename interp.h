@@ -3,6 +3,6 @@
 
 #include "env.h"
 
-Type * interp(Type *parseTree, Environment *e);
+Type* interp(Type *parseTree, Environment *e);
 
 #endif

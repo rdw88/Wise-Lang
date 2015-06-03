@@ -5,6 +5,7 @@
 
 #include "parser.h"
 #include "env.h"
+#include <stdbool.h>
 
 int get_array_length(char** array);
 
@@ -17,5 +18,7 @@ void free_type(Type *t);
 int power(int base, unsigned int e);
 
 int strToNum(char *str);
+
+int contains(char **array, char *val, unsigned int len);
 
 #endif
