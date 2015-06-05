@@ -21,4 +21,6 @@ int strToNum(char *str);
 
 int contains(char **array, char *val, unsigned int len);
 
+void copyType(Type *dest, Type *src);
+
 #endif

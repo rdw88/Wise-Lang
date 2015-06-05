@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "interp.h"
+#include "helper.h"
 
 
 Type* interp_add(Type *addNode, Environment *env) {
@@ -83,13 +84,7 @@ Type* interp(Type *parseTree, Environment *env) {
 		case ASN:;
 		Type* var = (Type *) parseTree->type1;
 		char* name = (char *) var->type1;
-		size_t length = strlen(name);
-
-		char* cpy = (char *) malloc(sizeof(char) * (length + 1));
-		memcpy(cpy, name, sizeof(char) * length);
-		cpy[length] = '\0';
-
-		extend_env(env, cpy, interp(parseTree->type2, env));
+		extend_env(env, name, interp(parseTree->type2, env));
 		break;
 
 		case VAR:
@@ -117,6 +112,8 @@ Type* interp(Type *parseTree, Environment *env) {
 		if (printable->type == INT) {
 			printf("- %d\n", *(int *) printable->type1);
 		}
+
+		free_type(printable);
 
 		break;
 	}

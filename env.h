@@ -12,6 +12,8 @@ typedef struct Environment {
 
 Environment* new_env();
 
+Type* copyTypeForEnv(Type *type);
+
 void extend_env(Environment *e, char *var, Type *t);
 
 void remove_env(Environment *e, char *var);

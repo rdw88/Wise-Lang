@@ -54,17 +54,25 @@ Type* parse(char **expression, size_t length) {
 		*n = atoi(expression[0]);
 
 		if (*n == 0 && expression[0][0] != '0') { // treated as a variable otherwise
+			size_t length = strlen(expression[0]);
+			char *varName = (char *) malloc(sizeof(char) * length + 1);
+			memcpy(varName, expression[0], sizeof(char) * length);
+			varName[length] = '\0';
+
 			rootType->type = VAR;
-			rootType->type1 = (void *) expression[0];
+			rootType->type1 = (void *) varName;
 			rootType->type2 = INT;
 
 			if (DEBUG)
 				printf("Got to VAR LOOKUP with %s", expression[0]);
 
+			free(n);
+
 			return rootType;
 		} else {
 			rootType->type = INT;
 			rootType->type1 = (void *) n;
+			rootType->type2 = 0;
 
 			if (DEBUG)
 				printf("Got to INT with num: %d\n", *(int*)rootType->type1);
@@ -83,6 +91,7 @@ Type* parse(char **expression, size_t length) {
 		}
 
 		rootType->type1 = parse(printExp, length - 1);
+		rootType->type2 = 0;
 		free(printExp);
 		return rootType;
 	}
@@ -120,8 +129,13 @@ Type* parse(char **expression, size_t length) {
 	for (i = 0; i < length; i++) {
 		if (strcmp(expression[i], TOKEN_INTEGER) == 0) {
 			if (i == 0) { // var declaration
+				size_t length = strlen(expression[i + 1]);
+				char *varName = (char *) malloc(sizeof(char) * length + 1);
+				memcpy(varName, expression[i + 1], sizeof(char) * length);
+				varName[length] = '\0';
+
 				rootType->type = VAR;
-				rootType->type1 = (void *) expression[i + 1];
+				rootType->type1 = (void *) varName;
 				rootType->type2 = (void *) INT;
 
 				if (DEBUG)

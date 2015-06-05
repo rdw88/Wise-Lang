@@ -21,7 +21,7 @@ int get_array_length(char** array) {
 
 
 char* parseTreeToString(Type *t) {
-	int len = 80;
+	int len = 512;
 	char *str = malloc(sizeof(char) * len);
 
 	switch (t->type) {
@@ -76,11 +76,15 @@ void free_env(Environment *e) {
 	}
 
 	free_type(e->t);
+	free(e->var);
 	free(e);
 }
 
 
 void free_type(Type *t) {
+	if (t == NULL)
+		return;
+
 	if (t->type == INT) {
 		free(t->type1);
 	} else if (t->type != VAR) {
@@ -91,6 +95,7 @@ void free_type(Type *t) {
 	}
 
 	free(t);
+	t = NULL;
 }
 
 
