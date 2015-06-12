@@ -18,6 +18,8 @@ void extend_env(Environment *e, char *var, Type *t);
 
 void remove_env(Environment *e, char *var);
 
+int modify_env(Environment *e, char *var, Type *t);
+
 Type* lookup_env(Environment *e, char *var);
 
 

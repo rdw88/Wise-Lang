@@ -25,7 +25,7 @@ Type* copyTypeForEnv(Type *type) {
 		char **varCpy = (char **) malloc(sizeof(char *));
 		*varCpy = (char *) type->type1;
 		newType->type1 = (void *) varCpy;
-		newType->type2 = INT;
+		newType->type2 = (void *) INT;
 	} else {
 		printf("FATAL: Environment only takes leaves, Type passed to environment must be evaluated first!\n");
 		exit(-1);
@@ -69,8 +69,13 @@ void extend_env(Environment *e, char *var, Type *t) {
 
 
 Type* lookup_env(Environment *e, char *var) {
+	if (e->var == NULL) {
+		printf("ERROR: Variable %s is not defined!\n", var);
+		return NULL;
+	}
+
 	if (strcmp(e->var, var) == 0) {
-		return e->t;
+		return copyTypeForEnv(e->t);
 	}
 
 	if (e->next == 0) {
@@ -79,6 +84,26 @@ Type* lookup_env(Environment *e, char *var) {
 	}
 
 	return lookup_env(e->next, var);
+}
+
+
+int modify_env(Environment *e, char *var, Type *t) {
+	if (e->var == NULL) {
+		printf("ERROR: Variable %s is not defined!\n", var);
+		return 0;
+	}
+
+	if (strcmp(e->var, var) == 0) {
+		e->t = copyTypeForEnv(t);
+		return 1;
+	}
+
+	if (e->next == 0) {
+		printf("ERROR: Variable %s is not defined!\n", var);
+		return 0;
+	}
+
+	return modify_env(e->next, var, t);
 }
 
 

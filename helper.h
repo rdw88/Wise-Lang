@@ -9,6 +9,8 @@
 
 int get_array_length(char** array);
 
+int isInt(char *str);
+
 char* parseTreeToString(Type *t);
 
 void free_env(Environment *e);

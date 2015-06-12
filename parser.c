@@ -21,6 +21,11 @@
 #define TOKEN_STDOUT "show"
 
 
+#define NO_ERROR -1
+#define SYNTAX_ERROR 0
+#define TYPE_ERROR 1
+
+
 char** tokenize(char *expression) {
 	char **tokens = NULL;
 	char *token;
@@ -46,141 +51,247 @@ char** tokenize(char *expression) {
 }
 
 
-Type* parse(char **expression, size_t length) {
-	Type *rootType = malloc(sizeof(Type));
+Type* error(Type *t, int *err, int errno) {
+	t->type = ERR;
+	*err = errno;
+	return t;
+}
 
-	if (length == 1) {
-		int *n = (int*) malloc(sizeof(int));
-		*n = atoi(expression[0]);
 
-		if (*n == 0 && expression[0][0] != '0') { // treated as a variable otherwise
-			size_t length = strlen(expression[0]);
-			char *varName = (char *) malloc(sizeof(char) * length + 1);
-			memcpy(varName, expression[0], sizeof(char) * length);
-			varName[length] = '\0';
+char*** splitExpression(char **expression, size_t length, int split) {
+	char **subset1 = malloc(sizeof(char *) * (split + 1));
+	char **subset2 = malloc(sizeof(char *) * (length - split));
+	char ***result = (char ***) malloc(sizeof(char **) * 2);
 
-			rootType->type = VAR;
-			rootType->type1 = (void *) varName;
-			rootType->type2 = INT;
+	for (int i = 0; i < split; i++) {
+		subset1[i] = expression[i];
+	}
+	subset1[split] = '\0';
 
-			if (DEBUG)
-				printf("Got to VAR LOOKUP with %s", expression[0]);
+	for (int i = split + 1; i < length; i++) {
+		subset2[i - split - 1] = expression[i];
+	}
+	subset2[length - split - 1] = '\0';
 
-			free(n);
+	result[0] = subset1;
+	result[1] = subset2;
 
-			return rootType;
-		} else {
-			rootType->type = INT;
-			rootType->type1 = (void *) n;
-			rootType->type2 = 0;
+	return result;
+}
 
-			if (DEBUG)
-				printf("Got to INT with num: %d\n", *(int*)rootType->type1);
 
-			return rootType;
-		}
+Type* varDeclare(char **expression, size_t length, int *err) {
+	Type *rootType = (Type *) malloc(sizeof(Type));
+
+	if (length < 4 || strcmp(expression[2], TOKEN_ASSIGNMENT) != 0) {
+		return error(rootType, err, SYNTAX_ERROR);
 	}
 
+	Type *varType = (Type *) malloc(sizeof(Type));
+	rootType->type = ASN;
+	varType->type = VAR;
 
-	if (strcmp(expression[0], TOKEN_STDOUT) == 0) {
-		rootType->type = PRINT;
+	size_t len = strlen(expression[1]);
+	char *varName = (char *) malloc(sizeof(char) * len + 1);
+	memcpy(varName, expression[1], sizeof(char) * len);
+	varName[len] = '\0';
 
-		char **printExp = malloc(sizeof(char*) * (length - 1));
-		for (int i = 1; i < length; i++) {
-			printExp[i - 1] = expression[i];
-		}
+	varType->type1 = (void *) varName;
 
-		rootType->type1 = parse(printExp, length - 1);
-		rootType->type2 = 0;
-		free(printExp);
-		return rootType;
+	if (strcmp(expression[0], TOKEN_INTEGER) == 0) {
+		varType->type2 = (void *) INT;
 	}
 
-
-	int i;
-	for (i = 0; i < length; i++) {
-		if (strcmp(expression[i], TOKEN_ASSIGNMENT) == 0) {
-			char **subset = malloc(sizeof(char*) * i);
-			char **subset2 = malloc(sizeof(char*) * (length - i - 1));
-
-			int k;
-			for (k = 0; k < i; k++) {
-				subset[k] = expression[k];
-			}
-
-			for (k = i + 1; k < length; k++) {
-				subset2[k - (i + 1)] = expression[k];
-			}
-
-			if (DEBUG)
-				printf("Got to ASN with subset: %s %s and subset2: %s\n", subset[0], subset[1], *subset2);
-
-			rootType->type = ASN;
-			rootType->type1 = (void *) parse(subset, i);
-			rootType->type2 = (void *) parse(subset2, length - i - 1);
-			
-			free(subset);
-			free(subset2);
-
-			return rootType;
-		}
+	size_t rValueLength = length - 3;
+	char **rValue = malloc(sizeof(char *) * (rValueLength + 1));
+	for (int i = 0; i < rValueLength; i++) {
+		rValue[i] = expression[i + 3];
 	}
 
-	for (i = 0; i < length; i++) {
-		if (strcmp(expression[i], TOKEN_INTEGER) == 0) {
-			if (i == 0) { // var declaration
-				size_t length = strlen(expression[i + 1]);
-				char *varName = (char *) malloc(sizeof(char) * length + 1);
-				memcpy(varName, expression[i + 1], sizeof(char) * length);
-				varName[length] = '\0';
+	rValue[rValueLength] = '\0';
 
-				rootType->type = VAR;
-				rootType->type1 = (void *) varName;
-				rootType->type2 = (void *) INT;
+	rootType->type1 = (void *) varType;
 
-				if (DEBUG)
-					printf("Got to VAR with type1: %s and type2: %s\n", (char*)rootType->type1, (char*)rootType->type2);
+	Type *p = parseIntExpression(rValue, rValueLength, err);
+	if (p->type == ERR)
+		rootType->type = ERR;
 
-				return rootType;
-			}
-		}
-	}
-
-	for (i = 0; i < length; i++) {
-		if (strcmp(expression[i], TOKEN_ADD) == 0 || strcmp(expression[i], TOKEN_SUBTRACT) == 0 || strcmp(expression[i], TOKEN_MULT) == 0 || strcmp(expression[i], TOKEN_DIVIDE) == 0) {
-			if (strcmp(expression[i], TOKEN_ADD) == 0)
-				rootType->type = ADD;
-			else if (strcmp(expression[i], TOKEN_SUBTRACT) == 0)
-				rootType->type = SUB;
-			else if (strcmp(expression[i], TOKEN_MULT) == 0)
-				rootType->type = MULT;
-			else if (strcmp(expression[i], TOKEN_DIVIDE) == 0)
-				rootType->type = DIV;
-			
-			char **subset1 = malloc(sizeof(char*) * i);
-			char **subset2 = malloc(sizeof(char*) * (length - i - 1));
-
-			int k;
-			for (k = 0; k < i; k++) {
-				subset1[k] = expression[k];
-			}
-
-			for (k = i + 1; k < length; k++) {
-				subset2[k - (i + 1)] = expression[k];
-			}
-			
-			rootType->type1 = parse(subset1, i);
-			rootType->type2 = parse(subset2, length - i - 1);
-
-			free(subset1);
-			free(subset2);
-
-			return rootType;
-		}
-	}
-
-	printf("ERROR: Error in expression\n");
-	exit(-1);
+	rootType->type2 = (void *) p;
 
 	return rootType;
+}
+
+
+exp_type getType(char **expression, size_t length) {
+	if (strcmp(expression[0], TOKEN_INTEGER) == 0) {
+		return ASN;
+	} else if (strcmp(expression[0], TOKEN_STDOUT) == 0) {
+		return PRINT;
+	}
+
+	if (length == 1) {
+		int n = atoi(expression[0]);
+		if (n == 0 && expression[0][0] != '0')
+			return VAR;
+
+		return INT;
+	}
+
+	if (strcmp(expression[1], TOKEN_ASSIGNMENT) == 0) {
+		return REASN;
+	} else {
+		return INT;
+	}
+}
+
+
+Type* varReassign(char **expression, size_t length, int *err) {
+	Type *type = (Type *) malloc(sizeof(Type));
+
+	if (length < 3) {
+		return error(type, err, SYNTAX_ERROR);
+	}
+
+	char ***split = splitExpression(expression, length, 1);
+
+	Type* varType = (Type *) malloc(sizeof(Type));
+	type->type = REASN;
+	varType->type = VAR;
+
+	size_t len = strlen(expression[0]);
+	char *varName = (char *) malloc(sizeof(char) * len + 1);
+	memcpy(varName, expression[0], sizeof(char) * len);
+	varName[len] = '\0';
+
+	exp_type reasnType = getType(split[1], length);
+	varType->type1 = (void *) varName;
+	varType->type2 = (void *) reasnType;
+
+	type->type1 = (void *) varType;
+
+	if (reasnType == INT)
+		type->type2 = (void *) parseIntExpression(split[1], length, err);
+
+	return type;
+}
+
+
+Type* parseStdout(char **expression, size_t length, int *err) {
+	Type *type = (Type *) malloc(sizeof(Type));
+	type->type = PRINT;
+
+	if (length == 1) {
+		type->type1 = 0;
+		type->type2 = 0;
+		return type;
+	}
+
+	char **printExp = malloc(sizeof(char *) * (length - 1));
+	for (int i = 1; i < length; i++) {
+		printExp[i - 1] = expression[i];
+	}
+
+	Type *p = parse(printExp, length - 1);
+	if (p->type == ERR)
+		type->type = ERR;
+
+	type->type1 = (void *) p;
+	type->type2 = 0;
+
+	free(printExp);
+	return type;
+}
+
+
+Type* parseVarExpression(char **expression) {
+	Type *type = (Type *) malloc(sizeof(Type));
+	size_t len = strlen(expression[0]);
+	char *varName = (char *) malloc(sizeof(char) * len + 1);
+	memcpy(varName, expression[0], sizeof(char) * len);
+	varName[len] = '\0';
+
+	type->type = VAR;
+	type->type1 = (void *) varName;
+	type->type2 = (void *) INT;
+
+	if (DEBUG)
+		printf("Got to VAR LOOKUP with %s\n", expression[0]);
+
+	return type;
+}
+
+
+Type* parseIntExpression(char **expression, size_t length, int *err) {
+	Type *type = (Type *) malloc(sizeof(Type));
+
+	if (length == 1) {
+		if (isInt(expression[0])) {
+			type->type = INT;
+			int *n = (int *) malloc(sizeof(int));
+			*n = atoi(expression[0]);
+			type->type1 = (void *) n;
+			type->type2 = 0;	
+		} else {
+			type = parseVarExpression(expression);
+		}
+		
+		return type;
+	}
+
+	char *order[4] = {TOKEN_DIVIDE, TOKEN_MULT, TOKEN_SUBTRACT, TOKEN_ADD};
+	exp_type types[4] = {DIV, MULT, SUB, ADD};
+
+	for (int k = 0; k < 4; k++) {
+		for (int i = 0; i < length; i++) {
+			if (strcmp(expression[i], order[k]) == 0) {
+				if (i == 0) {
+					return error(type, err, SYNTAX_ERROR);
+				}
+
+				char ***split = splitExpression(expression, length, i);
+
+				type->type = types[k];
+				type->type1 = (void *) parseIntExpression(split[0], i, err);
+				type->type2 = (void *) parseIntExpression(split[1], length - i - 1, err);
+
+				free(split[0]);
+				free(split[1]);
+				free(split);
+			}
+		}
+	}
+
+	return type;
+}
+
+
+Type* parse(char **expression, size_t length) {
+	exp_type expressionType = getType(expression, length);
+	int *err = (int *) malloc(sizeof(int));
+	*err = NO_ERROR;
+	Type *type;
+
+	if (expressionType == ASN) {
+		type = varDeclare(expression, length, err);
+	} else if (expressionType == PRINT) {
+		type = parseStdout(expression, length, err);
+	} else if (expressionType == INT) {
+		type = parseIntExpression(expression, length, err);
+	} else if (expressionType == VAR) {
+		type = parseVarExpression(expression);
+	} else {
+		type = varReassign(expression, length, err);
+	}
+
+	if (*err == SYNTAX_ERROR) {
+		printf("ERROR: Syntax error\n");
+	}
+
+	if (*err == TYPE_ERROR) {
+		printf("ERROR: Type error\n");
+	}
+
+	free(err);
+
+	return type;
 }

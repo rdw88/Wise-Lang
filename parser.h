@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 typedef enum {
+	ERR,
 	INT,
 	ADD,
 	SUB,
@@ -11,6 +12,7 @@ typedef enum {
 	DIV,
 	VAR,
 	ASN,
+	REASN,
 	PRINT
 } exp_type;
 
@@ -23,6 +25,10 @@ typedef struct Type {
 
 
 char** tokenize(char *expression);
+
+Type* parseIntExpression(char **expression, size_t length, int *err);
+
+Type* parseVarExpression(char **expression);
 
 Type* parse(char **expression, size_t length);
 

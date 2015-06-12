@@ -5,71 +5,72 @@
 #include "helper.h"
 
 
-Type* interp_add(Type *addNode, Environment *env) {
-	Type *num1 = interp(addNode->type1, env);
-	Type *num2 = interp(addNode->type2, env);
-	int val1 = *(int *) num1->type1;
-	int val2 = *(int *) num2->type1;
-
-	int *sum = (int *) malloc(sizeof(int));
-	*sum = val1 + val2;
-
-	Type *newInt = (Type *) malloc(sizeof(Type));
-	newInt->type = INT;
-	newInt->type1 = (void *) sum;
-
-	return newInt;
-}
+#define ARITH_ADD 0
+#define ARITH_SUB 1
+#define ARITH_MULT 2
+#define ARITH_DIV 3
 
 
-Type* interp_sub(Type *subNode, Environment *env) {
-	Type *num1 = interp(subNode->type1, env);
-	Type *num2 = interp(subNode->type2, env);
-	int val1 = *(int *) num1->type1;
-	int val2 = *(int *) num2->type1;
+Type* interp_arith(Type *type, Environment *env, int mode) {
+	int num1 = 0;
+	int num2 = 0;
 
-	int *diff = (int *) malloc(sizeof(int));
-	*diff = val1 - val2;
+	Type *node1 = (Type *) type->type1;
+	Type *node2 = (Type *) type->type2;
 
-	Type *newInt = (Type *) malloc(sizeof(Type));
-	newInt->type = INT;
-	newInt->type1 = (void *) diff;
+	if (node1->type == VAR) {
+		Type *t1 = lookup_env(env, (char *) node1->type1);
 
-	return newInt;
-}
+		if (t1 == NULL) {
+			return NULL;
+		}
 
+		num1 = *(int *) t1->type1;
+	} else if (node1->type == INT) {
+		num1 = *(int *) node1->type1;
+	} else {
+		Type *rec = interp(node1, env);
 
-Type* interp_mult(Type *multNode, Environment *env) {
-	Type *num1 = interp(multNode->type1, env);
-	Type *num2 = interp(multNode->type2, env);
-	int val1 = *(int *) num1->type1;
-	int val2 = *(int *) num2->type1;
+		if (rec != NULL) {
+			num1 = *(int *) rec->type1;
+		}
+	}
 
-	int *prod = (int *) malloc(sizeof(int));
-	*prod = val1 * val2;
+	if (node2->type == VAR) {
+		Type *t2 = lookup_env(env, (char *) node2->type1);
 
-	Type *newInt = (Type *) malloc(sizeof(Type));
-	newInt->type = INT;
-	newInt->type1 = (void *) prod;
+		if (t2 == NULL) {
+			return NULL;
+		}
 
-	return newInt;
-}
+		num2 = *(int *) t2->type1;
+	} else if (node2->type == INT) {
+		num2 = *(int *) node2->type1;
+	} else {
+		Type *rec = interp(node2, env);
 
+		if (rec != NULL) {
+			num2 = *(int *) rec->type1;
+		}
+	}
 
-Type* interp_div(Type *divNode, Environment *env) {
-	Type *num1 = interp(divNode->type1, env);
-	Type *num2 = interp(divNode->type2, env);
-	int val1 = *(int *) num1->type1;
-	int val2 = *(int *) num2->type1;
+	int *result = (int *) malloc(sizeof(int));
 
-	int *quo = (int *) malloc(sizeof(int));
-	*quo = val1 / val2;
+	if (mode == ARITH_ADD)
+		*result = num1 + num2;
+	else if (mode == ARITH_SUB)
+		*result = num1 - num2;
+	else if (mode == ARITH_MULT)
+		*result = num1 * num2;
+	else
+		*result = num1 / num2;
 
-	Type *newInt = (Type *) malloc(sizeof(Type));
-	newInt->type = INT;
-	newInt->type1 = (void *) quo;
+	Type *final = (Type *) malloc(sizeof(Type));
+	final->type = INT;
+	final->type1 = (void *) result;
+	final->type2 = 0;
 
-	return newInt;
+	return final;
 }
 
 
@@ -84,7 +85,16 @@ Type* interp(Type *parseTree, Environment *env) {
 		case ASN:;
 		Type* var = (Type *) parseTree->type1;
 		char* name = (char *) var->type1;
-		extend_env(env, name, interp(parseTree->type2, env));
+
+		Type *val = interp(parseTree->type2, env);
+		if (val != NULL)
+			extend_env(env, name, val);
+		break;
+
+		case REASN:;
+		var = (Type *) parseTree->type1;
+		name = (char *) var->type1;
+		modify_env(env, name, parseTree->type2);
 		break;
 
 		case VAR:
@@ -92,23 +102,32 @@ Type* interp(Type *parseTree, Environment *env) {
 		break;
 
 		case ADD:
-		return interp_add(parseTree, env);
+		return interp_arith(parseTree, env, ARITH_ADD);
 		break;
 
 		case SUB:
-		return interp_sub(parseTree, env);
+		return interp_arith(parseTree, env, ARITH_SUB);
 		break;
 
 		case MULT:
-		return interp_mult(parseTree, env);
+		return interp_arith(parseTree, env, ARITH_MULT);
 		break;
 
 		case DIV:
-		return interp_div(parseTree, env);
+		return interp_arith(parseTree, env, ARITH_DIV);
 		break;
 
 		case PRINT:;
+		if (parseTree->type1 == 0) {
+			printf("- \n");
+			break;
+		}
+
 		Type *printable = interp(parseTree->type1, env);
+
+		if (printable == NULL)
+			break;
+
 		if (printable->type == INT) {
 			printf("- %d\n", *(int *) printable->type1);
 		}

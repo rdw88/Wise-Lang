@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "helper.h"
 
@@ -20,21 +21,36 @@ int get_array_length(char** array) {
 }
 
 
+int isInt(char *str) {
+	int len = strlen(str);
+
+	for (int i = 0; i < len; i++) {
+		if (!isdigit(str[i]))
+			return 0;
+	}
+
+	return 1;
+}
+
+
 char* parseTreeToString(Type *t) {
-	int len = 512;
+	int len = 256;
 	char *str = malloc(sizeof(char) * len);
+
+	if (t == NULL)
+		return str;
 
 	switch (t->type) {
 		case VAR:;
 
 		char *var2 = "NOP";
-		exp_type *typ = (exp_type*) t->type2;
+		exp_type typ = (exp_type) t->type2;
 
 		if (typ == INT) {
 			var2 = "INT";
 		}
 
-		sprintf(str, "VAR(%s, %s)", (char*) t->type1, var2);
+		sprintf(str, "VAR(%s, %s)", (char*) t->type1, var2);		
 		break;
 
 		case ASN:
@@ -43,18 +59,22 @@ char* parseTreeToString(Type *t) {
 
 		case ADD:
 		sprintf(str, "ADD(%s, %s)", parseTreeToString((Type*) t->type1), parseTreeToString((Type*) t->type2));
+		
 		break;
 
 		case SUB:
 		sprintf(str, "SUB(%s, %s)", parseTreeToString((Type*) t->type1), parseTreeToString((Type*) t->type2));
+		
 		break;
 
 		case MULT:
 		sprintf(str, "MULT(%s, %s)", parseTreeToString((Type*) t->type1), parseTreeToString((Type*) t->type2));
+		
 		break;
 
 		case DIV:
 		sprintf(str, "DIV(%s, %s)", parseTreeToString((Type*) t->type1), parseTreeToString((Type*) t->type2));
+		
 		break;
 
 		case INT:
@@ -135,9 +155,9 @@ int strToNum(char *str) {
 int contains(char **array, char *val, unsigned int len) {
 	for (unsigned int i = 0; i < len; i++) {
 		if (strcmp(array[i], val) == 0) {
-			return 1;
+			return i;
 		}
 	}
 
-	return 0;
+	return -1;
 }

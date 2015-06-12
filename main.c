@@ -26,13 +26,15 @@ void execute(char *expression, Environment *env, char **flags, int flag_len) {
 	int length = get_array_length(terms);
 	Type *t = parse(terms, length);
 	
-	if (showParseTree) {
-		char *strRep = parseTreeToString(t);
-		printf("%s\n", strRep);
-		free(strRep);
-	}
+	if (t->type != ERR) {
+		if (showParseTree) {
+			char *strRep = parseTreeToString(t);
+			printf("%s\n", strRep);
+			free(strRep);
+		}
 
-	interp(t, env);
+		interp(t, env);
+	}
 
 	free_type(t);
 	free(terms);
@@ -69,10 +71,26 @@ void shell(char **flags, int flag_len) {
 int main(int argc, char **argv) {
 	signal(SIGINT, intHandler);
 
-	if (contains(argv, FLAG_SHOW_PARSE_TREE, argc)) {
+	if (contains(argv, FLAG_SHOW_PARSE_TREE, argc) != -1) {
 		showParseTree = (showParseTree == 0) ? 1 : 0;
 	}
 
 	shell(argv, argc);
-	return 0;
+	/*char expression[] = "show 2 + 6 / 3";
+	char **terms = tokenize(expression);
+	int length = get_array_length(terms);
+	Type *t = parse(terms, length);
+
+	if (t->type != ERR) {
+		char *strRep = parseTreeToString(t);
+		printf("%s\n", strRep);
+		free(strRep);
+		Environment *e = new_env();
+		interp(t, e);
+	}
+	
+	free_type(t);
+	free(terms);
+
+	return 0;*/
 }
